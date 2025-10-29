@@ -81,9 +81,9 @@ class Tool:
         self.__name__ = self.name
         self.__doc__ = self.description
 
-        # Generate and set the __annotations__ and __sig__ attributes based on input/output schemas.
+        # Generate and set the __annotations__ and __signature__ attributes based on input/output schemas.
         # This enables proper type hints and parameter documentation when the tool is called.
-        self.__annotations__, self.__sig__ = gen_anno_and_sig(
+        self.__annotations__, self.__signature__ = gen_anno_and_sig(
             self.input_schema.get("properties", {}),
             (
                 self.output_schema.get("properties", {}).get("result")
