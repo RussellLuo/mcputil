@@ -49,7 +49,7 @@ async def main():
         ),
     ) as client:
         tool: mcputil.Tool = (await client.get_tools())[0]
-        print(f"tool: {tool.name}{inspect.signature(tool)}")
+        print(f"tool signature: {tool.name}{inspect.signature(tool)}")
 
         output = await tool(a=1, b=2)
         print(f"tool output: {output}")

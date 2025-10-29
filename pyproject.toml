@@ -1,7 +1,7 @@
 [project]
 name = "mcputil"
-version = "0.1.0"
-description = "A utility for Model Context Protocol."
+version = "0.2.0"
+description = "A lightweight library that converts MCP tools into Python tools (function-like objects)."
 readme = "README.md"
 authors = [
     {name = "RussellLuo", email = "luopeng.he@gmail.com"}
