@@ -1,6 +1,6 @@
 from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP(name="Basic")
+mcp = FastMCP(name="Basic", log_level="ERROR")
 
 
 @mcp.tool()
@@ -10,4 +10,4 @@ def add(a: int, b: int) -> int:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http")
+    mcp.run(transport="stdio")

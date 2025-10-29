@@ -9,8 +9,6 @@ async def long_running_task(
     task_name: str, ctx: Context[ServerSession, None], steps: int = 5
 ) -> str:
     """Execute a task with progress updates."""
-    await ctx.info(f"Starting: {task_name}")
-
     for i in range(steps):
         progress = (i + 1) / steps
         await ctx.report_progress(
@@ -18,7 +16,6 @@ async def long_running_task(
             total=1.0,
             message=f"Step {i + 1}/{steps}",
         )
-        await ctx.debug(f"Completed step {i + 1}")
 
     return f"Task '{task_name}' completed"
 

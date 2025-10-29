@@ -5,11 +5,11 @@
 Run the MCP server:
 
 ```bash
-python server.py
+python examples/progress/server.py
 ```
 
 Run the progress example:
 
 ```bash
-python progress.py
+python examples/progress/progress.py
 ```
