@@ -188,13 +188,35 @@ async def main():
         )
 ```
 
+### [Pydantic AI][4]
+
+```python
+from pydantic_ai import Agent
+import mcputil
+
+
+async def main():
+    async with mcputil.Client(
+        mcputil.StreamableHTTP(url="http://localhost:8000"),
+    ) as client:
+        mcp_tools: list[mcputil.Tool] = await client.get_tools()
+
+        agent = Agent(
+            "google-gla:gemini-2.5-flash",
+            deps_type=str,
+            tools=mcp_tools,
+            system_prompt="You are a helpful agent.",
+        )
+```
+
 
 ## License
 
-[MIT][4]
+[MIT][5]
 
 
 [1]: https://modelcontextprotocol.io
 [2]: https://docs.langchain.com/oss/python/langchain/agents#defining-tools
 [3]: https://github.com/openai/openai-agents-python#functions-example
-[4]: http://opensource.org/licenses/MIT
+[4]: https://ai.pydantic.dev/tools/#registering-function-tools-via-agent-argument
+[5]: http://opensource.org/licenses/MIT
