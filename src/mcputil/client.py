@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import AbstractAsyncContextManager, AsyncExitStack
+from dataclasses import dataclass
 from typing import Callable
 from typing_extensions import TypeAlias
 
@@ -11,7 +12,6 @@ from mcp.client.streamable_http import streamablehttp_client
 from mcp.client.sse import sse_client
 from mcp.shared.session import RequestResponder
 import mcp.types as types
-from pydantic import BaseModel
 
 from .tool import Tool
 from .types import ProgressToken, ProgressEvent, EventBus
@@ -21,7 +21,8 @@ from .types import ProgressToken, ProgressEvent, EventBus
 Stdio: TypeAlias = StdioServerParameters
 
 
-class StreamableHTTP(BaseModel):
+@dataclass
+class StreamableHTTP:
     """Core parameters from `mcp.client.streamable_http.streamablehttp_client`."""
 
     url: str
@@ -33,13 +34,13 @@ class StreamableHTTP(BaseModel):
     timeout: float = 30
     """The timeout for the HTTP request in seconds. Defaults to `30`."""
 
-    def normalize(self) -> StreamableHTTP:
+    def __post_init__(self) -> None:
         if not self.url.endswith("/mcp"):
             self.url = self.url.removesuffix("/") + "/mcp"
-        return self
 
 
-class SSE(BaseModel):
+@dataclass
+class SSE:
     """Core parameters from `mcp.client.sse.sse_client`."""
 
     url: str
@@ -51,10 +52,9 @@ class SSE(BaseModel):
     timeout: float = 5
     """The timeout for the HTTP request in seconds. Defaults to `5`."""
 
-    def normalize(self) -> SSE:
+    def __post_init__(self) -> None:
         if not self.url.endswith("/sse"):
             self.url = self.url.removesuffix("/") + "/sse"
-        return self
 
 
 class Client:
@@ -71,8 +71,8 @@ class Client:
             params: The parameters to connect to the server.
             enable_cache: Whether to cache the list result. Defaults to `True`.
         """
-        self._params = params
-        self._cache_enabled = enable_cache
+        self._params: Stdio | StreamableHTTP | SSE = params
+        self._cache_enabled: bool = enable_cache
         self._event_bus: EventBus = EventBus()
 
         # The lock for protecting the following two cache-related variables.
@@ -88,7 +88,7 @@ class Client:
         await self.connect()
         return self
 
-    async def __aexit__(self, _exc_type, _exc_val, _exc_tb) -> None:
+    async def __aexit__(self, *_) -> None:
         """Exit the async context manager and clean up resources."""
         await self.close()
 
@@ -99,25 +99,24 @@ class Client:
 
         ctx_manager: AbstractAsyncContextManager
 
-        if isinstance(self._params, StreamableHTTP):
-            # Type narrowing for StreamableHTTPClientParams
-            if not isinstance(self._params, StreamableHTTP):
-                raise TypeError(
-                    "Expected StreamableHTTPClientParams for streamable-http transport"
-                )
-            normalized_params = self._params.normalize()
-            ctx_manager = streamablehttp_client(**normalized_params.model_dump())
-        elif isinstance(self._params, SSE):
-            # Type narrowing for SSEClientParams
-            if not isinstance(self._params, SSE):
-                raise TypeError("Expected SSEClientParams for sse transport")
-            normalized_params = self._params.normalize()
-            ctx_manager = sse_client(**normalized_params.model_dump())
-        else:  # "stdio":
-            # Type narrowing for StdioClientParams
-            if not isinstance(self._params, Stdio):
-                raise TypeError("Expected StdioClientParams for stdio transport")
+        if isinstance(self._params, Stdio):
             ctx_manager = stdio_client(self._params)
+        elif isinstance(self._params, StreamableHTTP):
+            ctx_manager = streamablehttp_client(
+                url=self._params.url,
+                headers=self._params.headers,
+                timeout=self._params.timeout,
+            )
+        elif isinstance(self._params, SSE):
+            ctx_manager = sse_client(
+                url=self._params.url,
+                headers=self._params.headers,
+                timeout=self._params.timeout,
+            )
+        else:
+            raise TypeError(
+                f"Expected Stdio, StreamableHTTP, or SSE parameters, got {type(self._params).__name__}"
+            )
 
         try:
             transport = await self._exit_stack.enter_async_context(ctx_manager)
@@ -139,17 +138,19 @@ class Client:
             await session.initialize()
 
             self._client_session = session
-        except Exception as exc:
+        except Exception:
             await self.close()
             raise
 
     async def close(self) -> None:
         """Cleanup the client session to server."""
+        if not self._client_session:
+            return
+
         try:
             await self._exit_stack.aclose()
-            if self._client_session:
-                self._client_session = None
-        except Exception as exc:
+            self._client_session = None
+        except Exception:
             pass
 
     async def invalidate_cache(self) -> None:
@@ -238,6 +239,7 @@ class Client:
                 except ValueError:
                     # Ignore invalid progress token.
                     return
+
                 await self._event_bus.publish(
                     call_id=progress_token.call_id,
                     event=ProgressEvent(
