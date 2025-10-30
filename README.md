@@ -128,10 +128,73 @@ async def main():
 ```
 
 
+## Agent Framework Integration
+
+Given the following MCP Server:
+
+```python
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP(name="Basic")
+
+
+@mcp.tool()
+def get_weather(city: str) -> str:
+    """Get the weather for a given city."""
+    return f"The weather in {city} is sunny."
+
+
+if __name__ == "__main__":
+    mcp.run(transport="streamable-http")
+```
+
+### [LangChain][2]
+
+```python
+from langchain.tools import tool
+from langchain.agents import create_agent
+import mcputil
+
+
+async def main():
+    async with mcputil.Client(
+        mcputil.StreamableHTTP(url="http://localhost:8000"),
+    ) as client:
+        mcp_tools: list[mcputil.Tool] = await client.get_tools()
+
+        agent = create_agent(
+            "openai:gpt-5",
+            tools=[tool(t) for t in mcp_tools],
+        )
+```
+
+### [OpenAI Agents SDK][3]
+
+```python
+from agents import Agent, function_tool
+import mcputil
+
+
+async def main():
+    async with mcputil.Client(
+        mcputil.StreamableHTTP(url="http://localhost:8000"),
+    ) as client:
+        mcp_tools: list[mcputil.Tool] = await client.get_tools()
+
+        agent = Agent(
+            name="Hello world",
+            instructions="You are a helpful agent.",
+            tools=[function_tool(t) for t in mcp_tools],
+        )
+```
+
+
 ## License
 
-[MIT][2]
+[MIT][4]
 
 
 [1]: https://modelcontextprotocol.io
-[2]: http://opensource.org/licenses/MIT
+[2]: https://docs.langchain.com/oss/python/langchain/agents#defining-tools
+[3]: https://github.com/openai/openai-agents-python#functions-example
+[4]: http://opensource.org/licenses/MIT
