@@ -191,8 +191,8 @@ async def main():
 ### [Pydantic AI][4]
 
 ```python
-from pydantic_ai import Agent
 import mcputil
+from pydantic_ai import Agent
 
 
 async def main():

@@ -1,8 +1,6 @@
 import asyncio
-import functools
-import inspect
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Callable
+from typing import Any, AsyncIterator
 from typing_extensions import TypeAlias
 
 import jsonschema

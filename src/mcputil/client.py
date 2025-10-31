@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from contextlib import AbstractAsyncContextManager, AsyncExitStack
 from dataclasses import dataclass
-from typing import Callable
 from typing_extensions import TypeAlias
 
 import aiorwlock
@@ -58,7 +57,7 @@ class SSE:
 
 
 class Client:
-    """A utility class for managing MCP server connections and operations."""
+    """A client for interacting with an MCP server."""
 
     def __init__(
         self,
@@ -143,7 +142,7 @@ class Client:
             raise
 
     async def close(self) -> None:
-        """Cleanup the client session to server."""
+        """Close the connection to the MCP server and clean up resources."""
         if not self._client_session:
             return
 
@@ -160,8 +159,8 @@ class Client:
 
     async def get_tools(
         self, include: list[str] | None = None, exclude: list[str] | None = None
-    ) -> list[Callable]:
-        """Get the list of callable tools from the server.
+    ) -> list[Tool]:
+        """Get the list of tools from the MCP server.
 
         Args:
             include: The list of tool names to include. If None, all tools are included.
@@ -186,7 +185,7 @@ class Client:
         return tools
 
     async def _list_tools(self) -> list[McpTool]:
-        """Get the list of tools from the server with caching.
+        """Get the list of tools from the MCP server with caching.
 
         Returns:
             The list of tools from the server.
@@ -212,7 +211,7 @@ class Client:
             self._list_tools_result_cache = result.tools
             return self._list_tools_result_cache
 
-    def _make_tool(self, t: McpTool) -> Callable:
+    def _make_tool(self, t: McpTool) -> Tool:
         return Tool(
             name=t.name,
             description=t.description or "",
