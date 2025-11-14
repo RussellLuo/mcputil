@@ -33,7 +33,12 @@ def gen_anno_and_sig(
     annotations = {}
     parameters = []
     for param_name, info in params_schema.items():
-        py_type = JSON_TYPE_MAP.get(info.get("type"), Any)
+        type_value = info.get("type")
+        if isinstance(type_value, list) and type_value:
+            # 如果是列表且不为空，使用第一个类型
+            py_type = JSON_TYPE_MAP.get(type_value[0], Any)
+        else:
+            py_type = JSON_TYPE_MAP.get(type_value, Any)
         default = info.get("default", Parameter.empty)
         if info.get("optional", False) and "default" not in info:
             default = None
@@ -53,6 +58,11 @@ def gen_anno_and_sig(
     else:
         return_annotation = Signature.empty
 
-    sig = Signature(parameters, return_annotation=return_annotation)
+    # sort parameters by position
+    positional_params = [p for p in parameters if p.default is Parameter.empty]
+    keyword_params = [p for p in parameters if p.default is not Parameter.empty]
+    sorted_parameters = positional_params + keyword_params
+    
+    sig = Signature(sorted_parameters, return_annotation=return_annotation)
 
     return annotations, sig
