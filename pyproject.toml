@@ -1,6 +1,6 @@
 [project]
 name = "mcputil"
-version = "0.3.0"
+version = "0.4.0"
 description = "A lightweight library that converts MCP tools into Python tools (function-like objects)."
 readme = "README.md"
 authors = [
