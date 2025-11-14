@@ -35,7 +35,6 @@ def gen_anno_and_sig(
     for param_name, info in params_schema.items():
         type_value = info.get("type")
         if isinstance(type_value, list) and type_value:
-            # 如果是列表且不为空，使用第一个类型
             py_type = JSON_TYPE_MAP.get(type_value[0], Any)
         else:
             py_type = JSON_TYPE_MAP.get(type_value, Any)
