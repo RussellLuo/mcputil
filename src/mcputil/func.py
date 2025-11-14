@@ -35,6 +35,8 @@ def gen_anno_and_sig(
     for param_name, info in params_schema.items():
         type_value = info.get("type")
         if isinstance(type_value, list) and type_value:
+            # An array of strings (e.g. ["number", "string"])
+            # See https://json-schema.org/understanding-json-schema/reference/type.
             py_type = JSON_TYPE_MAP.get(type_value[0], Any)
         else:
             py_type = JSON_TYPE_MAP.get(type_value, Any)
@@ -57,11 +59,11 @@ def gen_anno_and_sig(
     else:
         return_annotation = Signature.empty
 
-    # sort parameters by position
+    # Place positional arguments before keyword arguments.
     positional_params = [p for p in parameters if p.default is Parameter.empty]
     keyword_params = [p for p in parameters if p.default is not Parameter.empty]
-    sorted_parameters = positional_params + keyword_params
+    sorted_params = positional_params + keyword_params
     
-    sig = Signature(sorted_parameters, return_annotation=return_annotation)
+    sig = Signature(sorted_params, return_annotation=return_annotation)
 
     return annotations, sig
