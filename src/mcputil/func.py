@@ -19,6 +19,9 @@ class ParamName(str):
 
     @classmethod
     def wrap(cls, value: str) -> ParamName:
+        if value.startswith(cls.prefix):
+            # Already wrapped, just return as is.
+            return cls(value)
         return cls(f"{cls.prefix}{value}")
 
 

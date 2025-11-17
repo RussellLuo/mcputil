@@ -137,11 +137,10 @@ class Tool:
                 # Subscribe to progress updates.
                 await self._event_bus.subscribe(call_id, queue)
             try:
-                params: dict[str, Any] = {}
-                for k, v in kwargs.items():
-                    # Restore parameter names if necessary.
-                    name = k.unwrap() if isinstance(k, ParamName) else k
-                    params[name] = v
+                # Restore parameter names if started with `ParamName.prefix`.
+                params: dict[str, Any] = {
+                    ParamName.wrap(k).unwrap(): v for k, v in kwargs.items()
+                }
 
                 output = await f(**params)
                 queue.put_nowait(OutputEvent(output=output))
