@@ -8,7 +8,7 @@ from mcp import ClientSession
 import mcp.types as types
 
 from .types import ProgressToken, ProgressEvent, EventBus
-from .func import gen_anno_and_sig
+from .func import gen_anno_and_sig, Param
 
 
 @dataclass
@@ -137,7 +137,13 @@ class Tool:
                 # Subscribe to progress updates.
                 await self._event_bus.subscribe(call_id, queue)
             try:
-                output = await f(**kwargs)
+                params: dict[str, Any] = {}
+                for k, v in kwargs.items():
+                    # Restore parameter names if necessary.
+                    name = k.unwrap() if isinstance(k, Param) else k
+                    params[name] = v
+
+                output = await f(**params)
                 queue.put_nowait(OutputEvent(output=output))
                 return output
             except Exception as exc:

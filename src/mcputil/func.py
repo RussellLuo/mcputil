@@ -1,5 +1,26 @@
+from __future__ import annotations
+
 from inspect import Signature, Parameter
 from typing import Any
+
+
+class Param(str):
+    """A custom string class for parameter names.
+
+    This is mainly used to handle special names that are Python keywords (e.g. "from").
+    """
+
+    prefix = "_MCPUTIL_"
+
+    def unwrap(self) -> str:
+        if self.startswith(self.prefix):
+            return self[len(self.prefix) :]
+        return self
+
+    @classmethod
+    def wrap(cls, value: str) -> Param:
+        return cls(f"{cls.prefix}{value}")
+
 
 # Mapping from JSON schema types to Python types
 JSON_TYPE_MAP = {
@@ -43,12 +64,21 @@ def gen_anno_and_sig(
         default = info.get("default", Parameter.empty)
         if info.get("optional", False) and "default" not in info:
             default = None
-        param = Parameter(
-            param_name,
-            kind=Parameter.POSITIONAL_OR_KEYWORD,
-            default=default,
-            annotation=py_type,
-        )
+        try:
+            param = Parameter(
+                param_name,
+                kind=Parameter.POSITIONAL_OR_KEYWORD,
+                default=default,
+                annotation=py_type,
+            )
+        except ValueError:
+            # ValueError: '<param_name>' is not a valid parameter name
+            param = Parameter(
+                Param.wrap(param_name),
+                kind=Parameter.POSITIONAL_OR_KEYWORD,
+                default=default,
+                annotation=py_type,
+            )
         parameters.append(param)
         annotations[param_name] = py_type
 
@@ -63,7 +93,7 @@ def gen_anno_and_sig(
     positional_params = [p for p in parameters if p.default is Parameter.empty]
     keyword_params = [p for p in parameters if p.default is not Parameter.empty]
     sorted_params = positional_params + keyword_params
-    
+
     sig = Signature(sorted_params, return_annotation=return_annotation)
 
     return annotations, sig
