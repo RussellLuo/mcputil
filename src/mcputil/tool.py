@@ -8,7 +8,7 @@ from mcp import ClientSession
 import mcp.types as types
 
 from .types import ProgressToken, ProgressEvent, EventBus
-from .func import gen_anno_and_sig, Param
+from .func import gen_anno_and_sig, ParamName
 
 
 @dataclass
@@ -140,7 +140,7 @@ class Tool:
                 params: dict[str, Any] = {}
                 for k, v in kwargs.items():
                     # Restore parameter names if necessary.
-                    name = k.unwrap() if isinstance(k, Param) else k
+                    name = k.unwrap() if isinstance(k, ParamName) else k
                     params[name] = v
 
                 output = await f(**params)

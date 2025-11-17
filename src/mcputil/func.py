@@ -4,13 +4,13 @@ from inspect import Signature, Parameter
 from typing import Any
 
 
-class Param(str):
-    """A custom string class for parameter names.
+class ParamName(str):
+    """A custom string class for special parameter names.
 
-    This is mainly used to handle special names that are Python keywords (e.g. "from").
+    This is mainly used to handle parameter names that are Python keywords (e.g. "from").
     """
 
-    prefix = "_MCPUTIL_"
+    prefix = "__MCPUTIL__"
 
     def unwrap(self) -> str:
         if self.startswith(self.prefix):
@@ -18,7 +18,7 @@ class Param(str):
         return self
 
     @classmethod
-    def wrap(cls, value: str) -> Param:
+    def wrap(cls, value: str) -> ParamName:
         return cls(f"{cls.prefix}{value}")
 
 
@@ -74,7 +74,7 @@ def gen_anno_and_sig(
         except ValueError:
             # ValueError: '<param_name>' is not a valid parameter name
             param = Parameter(
-                Param.wrap(param_name),
+                ParamName.wrap(param_name),
                 kind=Parameter.POSITIONAL_OR_KEYWORD,
                 default=default,
                 annotation=py_type,
