@@ -10,7 +10,7 @@ class ParamName(str):
     This is mainly used to handle parameter names that are Python keywords (e.g. "from").
     """
 
-    prefix = "__MCPUTIL__"
+    prefix = "MCPUTIL__"
 
     def unwrap(self) -> str:
         if self.startswith(self.prefix):
