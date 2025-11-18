@@ -76,8 +76,9 @@ def gen_anno_and_sig(
             )
         except ValueError:
             # ValueError: '<param_name>' is not a valid parameter name
+            param_name = ParamName.wrap(param_name)
             param = Parameter(
-                ParamName.wrap(param_name),
+                param_name,
                 kind=Parameter.POSITIONAL_OR_KEYWORD,
                 default=default,
                 annotation=py_type,
