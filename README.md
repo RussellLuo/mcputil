@@ -127,6 +127,60 @@ async def main():
     # tool output: Task 'example-task' completed
 ```
 
+### Multiple MCP Servers
+
+`mcputil` also supports managing multiple MCP servers using the `Group` class:
+
+```python
+import inspect
+import mcputil
+
+
+async def main():
+    async with mcputil.Group(
+        math=mcputil.Stdio(
+            command="python",
+            args=["/path/to/server.py")],
+        ),
+        progress=mcputil.StreamableHTTP(url="http://localhost:8000"),
+    ) as group:
+        tools: dict[str, list[mcputil.Tool]] = await group.get_all_tools()
+        for name, tool_list in tools.items():
+            print(f"MCP server '{name}':")
+            for tool in tool_list:
+                print(f"    tool signature: {tool.name}{inspect.signature(tool)}")
+
+        result: mcputil.Result = await group.call_tool("math", "add", a=1, b=2)
+        output = await result.output()
+        print(f"\ntool output: {output}\n")
+
+        result: mcputil.Result = await group.call_tool(
+            "progress",
+            "long_running_task",
+            call_id="call_id_0",  # non-empty call ID for tracking progress
+            task_name="example-task",
+            steps=5,
+        )
+        async for event in result.events():
+            if isinstance(event, mcputil.ProgressEvent):
+                print(f"tool progress: {event}")
+            elif isinstance(event, mcputil.OutputEvent):
+                print(f"tool output: {event.output}")
+    # Output:
+    # MCP server 'math':
+    #     tool signature: add(a: int, b: int) -> int
+    # MCP server 'progress':
+    #     tool signature: long_running_task(task_name: str, steps: int = 5) -> str
+    #
+    # tool output: 3
+    #
+    # tool progress: ProgressEvent(progress=0.2, total=1.0, message='Step 1/5')
+    # tool progress: ProgressEvent(progress=0.4, total=1.0, message='Step 2/5')
+    # tool progress: ProgressEvent(progress=0.6, total=1.0, message='Step 3/5')
+    # tool progress: ProgressEvent(progress=0.8, total=1.0, message='Step 4/5')
+    # tool output: Task 'example-task' completed
+```
+
 
 ## Agent Framework Integration
 

@@ -52,6 +52,17 @@ class Result:
             elif isinstance(event, ExceptionEvent):
                 raise event.exc
 
+    async def output(self) -> Any:
+        """Wait for the tool to complete and return its output."""
+        async for event in self.events():
+            if isinstance(event, ProgressEvent):
+                # Ignore progress events here, use the `events` method directly for those.
+                continue
+            elif isinstance(event, OutputEvent):
+                return event.output
+            elif isinstance(event, ExceptionEvent):
+                raise event.exc
+
     def cancel(self) -> None:
         """Cancel the task associated with this result."""
         self._task.cancel()

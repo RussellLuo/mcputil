@@ -58,12 +58,15 @@ class SSE:
             self.url = self.url.removesuffix("/") + "/sse"
 
 
+Parameters: TypeAlias = Stdio | StreamableHTTP | SSE
+
+
 class Client:
     """A client for interacting with an MCP server."""
 
     def __init__(
         self,
-        params: Stdio | StreamableHTTP | SSE,
+        params: Parameters,
         enable_cache: bool = True,
     ) -> None:
         """Initialize the Client instance.
@@ -72,7 +75,7 @@ class Client:
             params: The parameters to connect to the server.
             enable_cache: Whether to cache the list result. Defaults to `True`.
         """
-        self._params: Stdio | StreamableHTTP | SSE = params
+        self._params: Parameters = params
         self._cache_enabled: bool = enable_cache
         self._event_bus: EventBus = EventBus()
 
