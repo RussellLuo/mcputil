@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 from contextlib import AbstractAsyncContextManager, AsyncExitStack
 from dataclasses import dataclass
+from typing import Any
 from typing_extensions import TypeAlias
 
 import aiorwlock
@@ -207,9 +209,23 @@ class Client:
             self._cache_invalidated = False
 
             # Fetch the tools from the server.
-            result = await self._client_session.list_tools()
+            result = await self._reconnect_and_retry_once_if_failed(
+                self._client_session.list_tools,
+            )
             self._list_tools_result_cache = result.tools
             return self._list_tools_result_cache
+
+    async def _call_tool(
+        self, name: str, arguments: dict[str, Any], progress_token: str = ""
+    ) -> types.CallToolResult:
+        meta = {"progressToken": progress_token} if progress_token else None
+
+        return await self._reconnect_and_retry_once_if_failed(
+            self._client_session.call_tool,
+            name=name,
+            arguments=arguments,
+            meta=meta,
+        )  # type: ignore
 
     def _make_tool(self, t: McpTool) -> Tool:
         return Tool(
@@ -217,9 +233,22 @@ class Client:
             description=t.description or "",
             input_schema=t.inputSchema,
             output_schema=t.outputSchema,
-            _client_session=self._client_session,
+            _call_fn=self._call_tool,
             _event_bus=self._event_bus,
         )
+
+    async def _reconnect_and_retry_once_if_failed(self, fn, *args, **kwargs):
+        try:
+            return await fn(*args, **kwargs)
+        except (asyncio.TimeoutError, Exception):
+            # TODO: Also refresh tool list, since the tools of the server might have changed?
+
+            # Reconnect
+            await self.close()
+            await self.connect()
+
+            # Retry once
+            return await fn(*args, **kwargs)
 
     async def _handle_message(
         self,

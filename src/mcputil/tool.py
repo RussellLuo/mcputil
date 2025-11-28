@@ -1,10 +1,9 @@
 import asyncio
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Callable
 from typing_extensions import TypeAlias
 
 import jsonschema
-from mcp import ClientSession
 import mcp.types as types
 
 from .types import ProgressToken, ProgressEvent, EventBus
@@ -62,6 +61,9 @@ class Result:
             self._queue.get_nowait()
 
 
+CallToolFn: TypeAlias = Callable[[str, dict[str, Any], str], types.CallToolResult]
+
+
 @dataclass(kw_only=True)
 class Tool:
     """A tool that can be executed on an MCP server."""
@@ -71,7 +73,7 @@ class Tool:
     input_schema: dict[str, Any]
     output_schema: dict[str, Any] | None = None
 
-    _client_session: ClientSession = field(repr=False)
+    _call_fn: CallToolFn = field(repr=False)
     _event_bus: EventBus = field(repr=False)
 
     def __post_init__(self):
@@ -106,14 +108,14 @@ class Tool:
             jsonschema.validate(instance=kwargs, schema=self.input_schema)
 
             # Actually call the tool.
-            meta = None
+            progress_token = ""
             if call_id is not None:
-                meta = dict(progressToken=ProgressToken(call_id).token)
+                progress_token = ProgressToken(call_id).token
 
-            result = await self._client_session.call_tool(
+            result = await self._call_fn(
                 self.name,
                 arguments=kwargs,
-                meta=meta,
+                progress_token=progress_token,
             )
             if not result.content:
                 return ""
