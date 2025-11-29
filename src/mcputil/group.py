@@ -10,7 +10,7 @@ from .tool import Result, Tool
 
 
 class Group:
-    """A group of MCP clients that can be managed collectively."""
+    """A group of MCP servers that can be managed collectively."""
 
     def __init__(self, **params: Parameters) -> None:
         """Initialize the Group with named server parameters.
@@ -67,6 +67,41 @@ class Group:
         """Get the dictionary of clients in the group."""
         return self._clients.copy()  # Return a copy to prevent external modifications
 
+    async def get_tools(self, server_name: str | None = None) -> list[Tool]:
+        """Get all tools available on a specific server or from all servers.
+
+        Args:
+            server_name: The name of the server to get tools from.
+            If None, get tools from all servers. Defaults to None.
+
+        Returns:
+            List of tools available on the server.
+
+        Raises:
+            KeyError: If the server_name is not found in the group.
+        """
+        if server_name is not None:
+            tools_dict = await self._get_tools(server_name)
+            return list(tools_dict.values())
+
+        tools_grouped = await self.get_tools_grouped_by_server()
+        tools = [tool for sublist in tools_grouped.values() for tool in sublist]
+        return tools
+
+    async def get_tools_grouped_by_server(self) -> dict[str, list[Tool]]:
+        """Get all tools from all servers grouped by server name.
+
+        Returns:
+            Dictionary mapping server names to their available tools.
+        """
+        result: dict[str, list[Tool]] = {}
+
+        for server_name in self._clients:
+            tools_dict = await self._get_tools(server_name)
+            result[server_name] = list(tools_dict.values())
+
+        return result
+
     async def call_tool(
         self,
         server_name: str,
@@ -89,41 +124,24 @@ class Group:
             KeyError: If the server_name is not found in the group.
             ValueError: If the tool_name is not found on the specified server.
         """
-        if server_name not in self._clients:
-            raise KeyError(
-                f"Server '{server_name}' not found in group. Available servers: {list(self._clients.keys())}"
-            )
-
-        # Get tools for the server (with caching)
-        async with self._cache_lock.reader_lock:
-            server_tools = self._tools_cache.get(server_name)
-
-        if server_tools is None:
-            async with self._cache_lock.writer_lock:
-                # Double-check in case another coroutine updated the cache
-                server_tools = self._tools_cache.get(server_name)
-                if server_tools is None:
-                    tools = await self.get_tools(server_name)
-                    server_tools = {tool.name: tool for tool in tools}
-                    self._tools_cache[server_name] = server_tools
-
-        tool = server_tools.get(tool_name)
+        tools_dict = await self._get_tools(server_name)
+        tool = tools_dict.get(tool_name)
         if tool is None:
-            available_tools = list(server_tools.keys())
+            available_tools = list(tools_dict.keys())
             raise ValueError(
                 f"Tool '{tool_name}' not found on server '{server_name}'. Available tools: {available_tools}"
             )
 
         return await tool.call(call_id=call_id, **kwargs)
 
-    async def get_tools(self, server_name: str) -> list[Tool]:
-        """Get all tools available on a specific server.
+    async def _get_tools(self, server_name: str) -> dict[str, Tool]:
+        """Get all tools available on a specific server with caching. Used internally.
 
         Args:
             server_name: The name of the server to get tools from.
 
         Returns:
-            List of tools available on the server.
+            Dictionary mapping tool names to Tool objects.
 
         Raises:
             KeyError: If the server_name is not found in the group.
@@ -133,32 +151,26 @@ class Group:
                 f"Server '{server_name}' not found in group. Available servers: {list(self._clients.keys())}"
             )
 
-        client = self._clients[server_name]
-        return await client.get_tools()
+        # Check cache first with reader lock
+        async with self._cache_lock.reader_lock:
+            server_tools = self._tools_cache.get(server_name)
+            if server_tools is not None:
+                return server_tools
 
-    async def get_all_tools(self) -> dict[str, list[Tool]]:
-        """Get all tools from all servers in the group.
-
-        Returns:
-            Dictionary mapping server names to their available tools.
-        """
-        result: dict[str, list[Tool]] = {}
-        tasks: list[asyncio.Task] = []
-        server_names: list[str] = []
-
-        for server_name in self._clients:
-            tasks.append(self.get_tools(server_name))
-            server_names.append(server_name)
-
-        tools_lists = await asyncio.gather(*tasks)
-
+        # Cache miss, fetch from client and update cache with writer lock
         async with self._cache_lock.writer_lock:
-            for server_name, tools in zip(server_names, tools_lists):
-                result[server_name] = tools
-                # Update cache
-                self._tools_cache[server_name] = {tool.name: tool for tool in tools}
+            # Double-check: another coroutine might have updated the cache
+            server_tools = self._tools_cache.get(server_name)
+            if server_tools is not None:
+                return server_tools
 
-        return result
+            # Fetch from client and update cache
+            client = self._clients[server_name]
+            tools = await client.get_tools()
+
+            server_tools = {tool.name: tool for tool in tools}
+            self._tools_cache[server_name] = server_tools
+            return server_tools
 
     async def invalidate_cache(self, server_name: str | None = None) -> None:
         """Invalidate the tools cache for a specific server or all servers.

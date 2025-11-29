@@ -48,6 +48,7 @@ class Result:
                 yield event
             elif isinstance(event, OutputEvent):
                 yield event
+                # TODO: progress events might receive after output event, need to handle it.
                 break
             elif isinstance(event, ExceptionEvent):
                 raise event.exc
@@ -65,7 +66,10 @@ class Result:
 
     def cancel(self) -> None:
         """Cancel the task associated with this result."""
+
+        # Cancel the consuming task and the events() loop.
         self._task.cancel()
+        self._cancel_event.set()
 
         # Clear the queue to prevent processing stale events.
         while not self._queue.empty():
@@ -156,6 +160,7 @@ class Tool:
                 }
 
                 output = await f(**params)
+                # TODO: progress events might receive after output event, need to handle it.
                 queue.put_nowait(OutputEvent(output=output))
                 return output
             except Exception as exc:
