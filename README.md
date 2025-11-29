@@ -144,15 +144,55 @@ async def main():
         ),
         progress=mcputil.StreamableHTTP(url="http://localhost:8000"),
     ) as group:
-        tools: dict[str, list[mcputil.Tool]] = await group.get_all_tools()
-        for name, tool_list in tools.items():
-            print(f"MCP server '{name}':")
-            for tool in tool_list:
-                print(f"    tool signature: {tool.name}{inspect.signature(tool)}")
+        tools: list[mcputil.Tool] = await group.get_tools()
+        for tool in tools:
+            print(f"tool signature: {tool.name}{inspect.signature(tool)}")
+            if tool.name == "add":
+                output = await tool(a=1, b=2)
+                print(f"tool output: {output}\n")
+            elif tool.name == "long_running_task":
+                result: mcputil.Result = await tool.call(
+                    "call_id_0",  # non-empty call ID for tracking progress
+                    task_name="example-task",
+                    steps=5,
+                )
+                async for event in result.events():
+                    if isinstance(event, mcputil.ProgressEvent):
+                        print(f"tool progress: {event}")
+                    elif isinstance(event, mcputil.OutputEvent):
+                        print(f"tool output: {event.output}")
 
+    # Output:
+    # tool signature: add(a: int, b: int) -> int
+    # tool output: 3
+    #
+    # tool signature: long_running_task(task_name: str, steps: int = 5) -> str
+    # tool progress: ProgressEvent(progress=0.2, total=1.0, message='Step 1/5')
+    # tool progress: ProgressEvent(progress=0.4, total=1.0, message='Step 2/5')
+    # tool progress: ProgressEvent(progress=0.6, total=1.0, message='Step 3/5')
+    # tool progress: ProgressEvent(progress=0.8, total=1.0, message='Step 4/5')
+    # tool progress: ProgressEvent(progress=1.0, total=1.0, message='Step 5/5')
+    # tool output: Task 'example-task' completed
+```
+
+Additionally, you can call tools by their names:
+
+```python
+import inspect
+import mcputil
+
+
+async def main():
+    async with mcputil.Group(
+        math=mcputil.Stdio(
+            command="python",
+            args=["/path/to/server.py")],
+        ),
+        progress=mcputil.StreamableHTTP(url="http://localhost:8000"),
+    ) as group:
         result: mcputil.Result = await group.call_tool("math", "add", a=1, b=2)
         output = await result.output()
-        print(f"\ntool output: {output}\n")
+        print(f"tool output: {output}\n")
 
         result: mcputil.Result = await group.call_tool(
             "progress",
@@ -166,18 +206,15 @@ async def main():
                 print(f"tool progress: {event}")
             elif isinstance(event, mcputil.OutputEvent):
                 print(f"tool output: {event.output}")
+
     # Output:
-    # MCP server 'math':
-    #     tool signature: add(a: int, b: int) -> int
-    # MCP server 'progress':
-    #     tool signature: long_running_task(task_name: str, steps: int = 5) -> str
-    #
     # tool output: 3
     #
     # tool progress: ProgressEvent(progress=0.2, total=1.0, message='Step 1/5')
     # tool progress: ProgressEvent(progress=0.4, total=1.0, message='Step 2/5')
     # tool progress: ProgressEvent(progress=0.6, total=1.0, message='Step 3/5')
     # tool progress: ProgressEvent(progress=0.8, total=1.0, message='Step 4/5')
+    # tool progress: ProgressEvent(progress=1.0, total=1.0, message='Step 5/5')
     # tool output: Task 'example-task' completed
 ```
 

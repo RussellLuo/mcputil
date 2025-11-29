@@ -9,6 +9,45 @@ CWD = Path(__file__).parent.resolve()
 BASIC_PATH = CWD.parent / "basic"
 
 
+async def call_directly(group: mcputil.Group) -> None:
+    tools: list[mcputil.Tool] = await group.get_tools()
+    for tool in tools:
+        print(f"tool signature: {tool.name}{inspect.signature(tool)}")
+        if tool.name == "add":
+            output = await tool(a=1, b=2)
+            print(f"tool output: {output}\n")
+        elif tool.name == "long_running_task":
+            result: mcputil.Result = await tool.call(
+                "call_id_0",  # non-empty call ID for tracking progress
+                task_name="example-task",
+                steps=5,
+            )
+            async for event in result.events():
+                if isinstance(event, mcputil.ProgressEvent):
+                    print(f"tool progress: {event}")
+                elif isinstance(event, mcputil.OutputEvent):
+                    print(f"tool output: {event.output}")
+
+
+async def call_via_group(group: mcputil.Group) -> None:
+    result: mcputil.Result = await group.call_tool("math", "add", a=1, b=2)
+    output = await result.output()
+    print(f"tool output: {output}\n")
+
+    result: mcputil.Result = await group.call_tool(
+        "progress",
+        "long_running_task",
+        call_id="call_id_0",  # non-empty call ID for tracking progress
+        task_name="example-task",
+        steps=5,
+    )
+    async for event in result.events():
+        if isinstance(event, mcputil.ProgressEvent):
+            print(f"tool progress: {event}")
+        elif isinstance(event, mcputil.OutputEvent):
+            print(f"tool output: {event.output}")
+
+
 async def main():
     async with mcputil.Group(
         math=mcputil.Stdio(
@@ -17,28 +56,11 @@ async def main():
         ),
         progress=mcputil.StreamableHTTP(url="http://localhost:8000"),
     ) as group:
-        tools: dict[str, list[mcputil.Tool]] = await group.get_all_tools()
-        for name, tool_list in tools.items():
-            print(f"MCP server '{name}':")
-            for tool in tool_list:
-                print(f"    tool signature: {tool.name}{inspect.signature(tool)}")
+        print("[Calling directly]")
+        await call_directly(group)
 
-        result: mcputil.Result = await group.call_tool("math", "add", a=1, b=2)
-        output = await result.output()
-        print(f"\ntool output: {output}\n")
-
-        result: mcputil.Result = await group.call_tool(
-            "progress",
-            "long_running_task",
-            call_id="call_id_0",  # non-empty call ID for tracking progress
-            task_name="example-task",
-            steps=5,
-        )
-        async for event in result.events():
-            if isinstance(event, mcputil.ProgressEvent):
-                print(f"tool progress: {event}")
-            elif isinstance(event, mcputil.OutputEvent):
-                print(f"tool output: {event.output}")
+        print("\n[Calling via group]")
+        await call_via_group(group)
 
 
 if __name__ == "__main__":
