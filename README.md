@@ -45,7 +45,7 @@ async def main():
     async with mcputil.Client(
         mcputil.Stdio(
             command="python",
-            args=["/path/to/server.py")],
+            args=["/path/to/server.py"],
         ),
     ) as client:
         tool: mcputil.Tool = (await client.get_tools())[0]
@@ -140,7 +140,7 @@ async def main():
     async with mcputil.Group(
         math=mcputil.Stdio(
             command="python",
-            args=["/path/to/server.py")],
+            args=["/path/to/server.py"],
         ),
         progress=mcputil.StreamableHTTP(url="http://localhost:8000"),
     ) as group:
@@ -175,7 +175,7 @@ async def main():
     # tool output: Task 'example-task' completed
 ```
 
-Additionally, you can call tools by their names:
+Additionally, you can also call tools by their names without fetching them first:
 
 ```python
 import inspect
@@ -186,7 +186,7 @@ async def main():
     async with mcputil.Group(
         math=mcputil.Stdio(
             command="python",
-            args=["/path/to/server.py")],
+            args=["/path/to/server.py"],
         ),
         progress=mcputil.StreamableHTTP(url="http://localhost:8000"),
     ) as group:
