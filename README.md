@@ -301,6 +301,11 @@ async def main():
 ```
 
 
+## CLI
+
+`mcputil` also comes with a CLI for generating a file tree of all available tools from connected MCP servers, which helps with [Code execution with MCP][5]. Checkout out the [example](./examples/code-execution).
+
+
 ## License
 
 [MIT][5]
@@ -310,4 +315,5 @@ async def main():
 [2]: https://docs.langchain.com/oss/python/langchain/agents#defining-tools
 [3]: https://github.com/openai/openai-agents-python#functions-example
 [4]: https://ai.pydantic.dev/tools/#registering-function-tools-via-agent-argument
-[5]: http://opensource.org/licenses/MIT
+[5]: https://www.anthropic.com/engineering/code-execution-with-mcp
+[6]: http://opensource.org/licenses/MIT
