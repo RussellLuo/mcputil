@@ -60,7 +60,7 @@ mcputil \
     -o examples/code-execution/output/servers
 ```
 
-> For those who want to preview the final generated code, see the pre-generated [servers](examples/code-execution/output/servers).
+> For those who want to preview the final generated code, see the pre-generated [servers](output/servers).
 
 Run the example agent:
 
