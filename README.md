@@ -341,7 +341,7 @@ Examples:
   mcputil --config mcp.json --output my_servers
 ```
 
-> > [!NOTE]
+> [!NOTE]
 > Example [`mcp.json`][6]:
 >
 > ```json
