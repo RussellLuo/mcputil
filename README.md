@@ -341,10 +341,32 @@ Examples:
   mcputil --config mcp.json --output my_servers
 ```
 
+> > [!NOTE]
+> Example [`mcp.json`][6]:
+>
+> ```json
+> {
+>   "mcpServers": {
+>     "local-server": {
+>       "command": "python",
+>       "args": ["mcp-server.py"],
+>       "env": {
+>         "API_KEY": "value"
+>       }
+>     },
+>     "remote-server": {
+>       "url": "http://localhost:3000/mcp",
+>       "headers": {
+>         "API_KEY": "value"
+>       }
+>     }
+>   }
+> }
+
 
 ## License
 
-[MIT][5]
+[MIT][7]
 
 
 [1]: https://modelcontextprotocol.io
@@ -352,4 +374,5 @@ Examples:
 [3]: https://github.com/openai/openai-agents-python#functions-example
 [4]: https://ai.pydantic.dev/tools/#registering-function-tools-via-agent-argument
 [5]: https://www.anthropic.com/engineering/code-execution-with-mcp
-[6]: http://opensource.org/licenses/MIT
+[6]: https://cursor.com/docs/context/mcp#using-mcpjson
+[7]: http://opensource.org/licenses/MIT
