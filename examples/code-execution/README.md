@@ -50,10 +50,17 @@ Generate a file tree of all available tools from MCP servers:
 
 ```bash
 mcputil \
-    --server='{"name": "google_drive", "url": "http://localhost:8000"}' \
-    --server='{"name": "salesforce", "url": "http://localhost:8001"}' \
+    -s='{"name": "google_drive", "url": "http://localhost:8000"}' \
+    -s='{"name": "salesforce", "url": "http://localhost:8001"}' \
+    -o examples/code-execution/output/servers
+
+# Or use the `mcp.json` file directly
+mcputil \
+    -c examples/code-execution/mcp.json \
     -o examples/code-execution/output/servers
 ```
+
+> For those who want to preview the final generated code, see the pre-generated [servers](examples/code-execution/output/servers).
 
 Run the example agent:
 

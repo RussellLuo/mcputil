@@ -10,9 +10,96 @@ import argparse
 import asyncio
 import json
 import sys
+from pathlib import Path
 
-from ..client import StreamableHTTP, Parameters
+from ..client import StreamableHTTP, Stdio, Parameters
 from .gen import get_tools_and_generate_files
+
+
+def parse_single_server(
+    server_name: str, server_config: dict
+) -> tuple[str, Parameters]:
+    """
+    Parse a single server configuration dictionary and return server parameters.
+
+    Args:
+        server_name: Name of the server
+        server_config: Dictionary containing server configuration
+
+    Returns:
+        Tuple of (server_name, Parameters object)
+
+    Raises:
+        ValueError: If the server configuration is invalid or missing required fields
+    """
+    if not isinstance(server_config, dict):
+        raise ValueError(
+            f"Server configuration for '{server_name}' must be a JSON object"
+        )
+
+    # Determine if this is a local (stdio) or remote (HTTP) server
+    if "command" in server_config:
+        # Local server using stdio
+        command = server_config["command"]
+        args = server_config.get("args", [])
+        env = server_config.get("env")
+
+        params = Stdio(command=command, args=args, env=env)
+    elif "url" in server_config:
+        # Remote server using HTTP
+        url = server_config["url"]
+        headers = server_config.get("headers")
+        timeout = server_config.get("timeout", 30)
+
+        params = StreamableHTTP(url=url, headers=headers, timeout=timeout)
+    else:
+        raise ValueError(
+            f"Server '{server_name}' must have either 'command' (for Stdio) or 'url' (for HTTP-Streamable or SSE)"
+        )
+
+    return server_name, params
+
+
+def parse_config_file(config_path: str) -> list[tuple[str, Parameters]]:
+    """
+    Parse MCP configuration file and return list of servers.
+
+    Args:
+        config_path: Path to the mcp.json configuration file
+
+    Returns:
+        List of (server_name, Parameters) tuples
+
+    Raises:
+        ValueError: If the config file is invalid or missing required fields
+        FileNotFoundError: If the config file doesn't exist
+    """
+    config_file = Path(config_path)
+    if not config_file.exists():
+        raise FileNotFoundError(f"Configuration file not found: {config_path}")
+
+    try:
+        with open(config_file, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON in configuration file: {e}")
+
+    if not isinstance(config, dict):
+        raise ValueError("Configuration file must contain a JSON object")
+
+    if "mcpServers" not in config:
+        raise ValueError("Configuration file must contain 'mcpServers' field")
+
+    mcp_servers = config["mcpServers"]
+    if not isinstance(mcp_servers, dict):
+        raise ValueError("'mcpServers' must be a JSON object")
+
+    servers = []
+    for server_name, server_config in mcp_servers.items():
+        server_name, params = parse_single_server(server_name, server_config)
+        servers.append((server_name, params))
+
+    return servers
 
 
 def parse_server_config(server_json: str) -> tuple[str, Parameters]:
@@ -39,18 +126,12 @@ def parse_server_config(server_json: str) -> tuple[str, Parameters]:
     if "name" not in config:
         raise ValueError("Server configuration must include 'name' field")
 
-    if "url" not in config:
-        raise ValueError("Server configuration must include 'url' field")
-
     server_name = config["name"]
-    url = config["url"]
-    headers = config.get("headers")
-    timeout = config.get("timeout", 30)
 
-    # Create StreamableHTTP parameters (as requested in the user's requirements)
-    params = StreamableHTTP(url=url, headers=headers, timeout=timeout)
+    # Remove the name field from config before passing to parse_single_server
+    server_config = {k: v for k, v in config.items() if k != "name"}
 
-    return server_name, params
+    return parse_single_server(server_name, server_config)
 
 
 async def main_async():
@@ -60,22 +141,33 @@ async def main_async():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Single server
+  # Single server via --server
   mcputil --server='{"name": "math", "url": "http://localhost:8000"}'
   
-  # Multiple servers
+  # Multiple servers via --server
   mcputil --server='{"name": "math", "url": "http://localhost:8000"}' \\
           --server='{"name": "weather", "url": "http://localhost:8001"}'
   
-  # With custom headers and timeout
+  # With custom headers and timeout via --server
   mcputil --server='{"name": "api", "url": "http://api.example.com", "headers": {"Authorization": "Bearer token"}, "timeout": 60}'
+
+  # Using configuration file
+  mcputil --config mcp.json
+
+  # Configuration file with custom output directory
+  mcputil --config mcp.json --output my_servers
         """,
     )
     parser.add_argument(
+        "-s",
         "--server",
         action="append",
-        required=True,
         help='Server configuration as JSON. Format: {"name": "server_name", "url": "server_url", "headers": {...}, "timeout": 30}',
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        help="Path to MCP configuration file (mcp.json format)",
     )
     parser.add_argument(
         "-o",
@@ -86,11 +178,24 @@ Examples:
     args = parser.parse_args()
 
     try:
+        # Validate arguments
+        if not args.server and not args.config:
+            parser.error("Either --server or --config must be specified")
+
+        if args.server and args.config:
+            parser.error("Cannot specify both --server and --config")
+
         # Parse server configurations
         servers = []
-        for server_json in args.server:
-            server_name, params = parse_server_config(server_json)
-            servers.append((server_name, params))
+
+        if args.config:
+            # Parse from configuration file
+            servers = parse_config_file(args.config)
+        else:
+            # Parse from --server arguments
+            for server_json in args.server:
+                server_name, params = parse_server_config(server_json)
+                servers.append((server_name, params))
 
         print(f"Connecting to {len(servers)} server(s)...", file=sys.stderr)
 

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "google_drive": {
+      "url": "http://localhost:8000"
+    },
+    "salesforce": {
+      "url": "http://localhost:8001"
+    }
+  }
+}
