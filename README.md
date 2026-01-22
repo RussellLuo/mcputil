@@ -305,6 +305,42 @@ async def main():
 
 `mcputil` also comes with a CLI for generating a file tree of all available tools from connected MCP servers, which helps with [Code execution with MCP][5]. Checkout out the [example](./examples/code-execution).
 
+Usage:
+
+```bash
+$ mcputil -h
+usage: mcputil [-h] [-s SERVER] [-c CONFIG] [-o OUTPUT]
+
+mcputil - Generate Python functions from MCP server tools
+
+options:
+  -h, --help            show this help message and exit
+  -s SERVER, --server SERVER
+                        Server configuration as JSON. Format: {"name": "server_name", "url": "server_url",
+                        "headers": {...}, "timeout": 30}
+  -c CONFIG, --config CONFIG
+                        Path to MCP configuration file (mcp.json format)
+  -o OUTPUT, --output OUTPUT
+                        Output directory path. Default: 'servers'
+
+Examples:
+  # Single server via --server
+  mcputil --server='{"name": "math", "url": "http://localhost:8000"}'
+
+  # Multiple servers via --server
+  mcputil --server='{"name": "math", "url": "http://localhost:8000"}' \
+          --server='{"name": "weather", "url": "http://localhost:8001"}'
+
+  # With custom headers and timeout via --server
+  mcputil --server='{"name": "api", "url": "http://api.example.com", "headers": {"Authorization": "Bearer token"}, "timeout": 60}'
+
+  # Using configuration file
+  mcputil --config mcp.json
+
+  # Configuration file with custom output directory
+  mcputil --config mcp.json --output my_servers
+```
+
 
 ## License
 

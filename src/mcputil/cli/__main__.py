@@ -143,11 +143,11 @@ async def main_async():
 Examples:
   # Single server via --server
   mcputil --server='{"name": "math", "url": "http://localhost:8000"}'
-  
+
   # Multiple servers via --server
   mcputil --server='{"name": "math", "url": "http://localhost:8000"}' \\
           --server='{"name": "weather", "url": "http://localhost:8001"}'
-  
+
   # With custom headers and timeout via --server
   mcputil --server='{"name": "api", "url": "http://api.example.com", "headers": {"Authorization": "Bearer token"}, "timeout": 60}'
 
