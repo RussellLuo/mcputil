@@ -141,6 +141,9 @@ async def main_async():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  # Use default configuration file (.mcputil/mcp.json or ~/.mcputil/mcp.json)
+  mcputil
+
   # Single server via --server
   mcputil --server='{"name": "math", "url": "http://localhost:8000"}'
 
@@ -151,7 +154,7 @@ Examples:
   # With custom headers and timeout via --server
   mcputil --server='{"name": "api", "url": "http://api.example.com", "headers": {"Authorization": "Bearer token"}, "timeout": 60}'
 
-  # Using configuration file
+  # Using specific configuration file
   mcputil --config mcp.json
 
   # Configuration file with custom output directory
@@ -167,7 +170,7 @@ Examples:
     parser.add_argument(
         "-c",
         "--config",
-        help="Path to MCP configuration file (mcp.json format)",
+        help="Path to MCP configuration file (mcp.json format). Default: .mcputil/mcp.json or ~/.mcputil/mcp.json",
     )
     parser.add_argument(
         "-o",
@@ -179,9 +182,6 @@ Examples:
 
     try:
         # Validate arguments
-        if not args.server and not args.config:
-            parser.error("Either --server or --config must be specified")
-
         if args.server and args.config:
             parser.error("Cannot specify both --server and --config")
 
@@ -189,8 +189,30 @@ Examples:
         servers = []
 
         if args.config:
-            # Parse from configuration file
+            # Parse from configuration file specified by user
             servers = parse_config_file(args.config)
+        elif not args.server:
+            # Try default config paths if no --server is provided
+            default_paths = [
+                Path.cwd() / ".mcputil" / "mcp.json",
+                Path.home() / ".mcputil" / "mcp.json",
+            ]
+
+            config_found = False
+            for default_path in default_paths:
+                if default_path.exists():
+                    print(f"Using configuration file: {default_path}", file=sys.stderr)
+                    servers = parse_config_file(str(default_path))
+                    config_found = True
+                    break
+
+            if not config_found:
+                parser.error(
+                    "No server configuration found. Either:\n"
+                    "  - Use --server to specify server(s)\n"
+                    "  - Use --config to specify a configuration file\n"
+                    "  - Create a configuration file at .mcputil/mcp.json or ~/.mcputil/mcp.json"
+                )
         else:
             # Parse from --server arguments
             for server_json in args.server:
