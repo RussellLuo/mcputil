@@ -316,14 +316,16 @@ mcputil - Generate Python functions from MCP server tools
 options:
   -h, --help            show this help message and exit
   -s SERVER, --server SERVER
-                        Server configuration as JSON. Format: {"name": "server_name", "url": "server_url",
-                        "headers": {...}, "timeout": 30}
+                        Server configuration as JSON. Format: {"name": "server_name", "url": "server_url", "headers": {...}, "timeout": 30}
   -c CONFIG, --config CONFIG
-                        Path to MCP configuration file (mcp.json format)
+                        Path to MCP configuration file (mcp.json format). Default: .mcputil/mcp.json or ~/.mcputil/mcp.json
   -o OUTPUT, --output OUTPUT
                         Output directory path. Default: 'servers'
 
 Examples:
+  # Use default configuration file (.mcputil/mcp.json or ~/.mcputil/mcp.json)
+  mcputil
+
   # Single server via --server
   mcputil --server='{"name": "math", "url": "http://localhost:8000"}'
 
@@ -334,7 +336,7 @@ Examples:
   # With custom headers and timeout via --server
   mcputil --server='{"name": "api", "url": "http://api.example.com", "headers": {"Authorization": "Bearer token"}, "timeout": 60}'
 
-  # Using configuration file
+  # Using specific configuration file
   mcputil --config mcp.json
 
   # Configuration file with custom output directory
